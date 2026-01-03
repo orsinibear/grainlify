@@ -12,3 +12,4 @@ ALTER TABLE projects
 -- Create index for filtering active projects
 CREATE INDEX IF NOT EXISTS idx_projects_deleted_at ON projects(deleted_at) WHERE deleted_at IS NULL;
 
+

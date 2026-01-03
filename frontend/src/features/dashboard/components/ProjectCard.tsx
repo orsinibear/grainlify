@@ -1,5 +1,6 @@
-import { Star, GitFork } from 'lucide-react';
+import { Star, GitFork, Package } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+import { useState } from 'react';
 
 export interface Project {
   id: number | string;
@@ -22,6 +23,10 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onClick }: ProjectCardProps) {
   const { theme } = useTheme();
+  const [avatarError, setAvatarError] = useState(false);
+
+  // Check if icon is a URL (GitHub avatar) or emoji/text
+  const isAvatarUrl = project.icon.startsWith('http');
 
   return (
     <div
@@ -33,9 +38,24 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       onClick={() => onClick?.(project.id.toString())}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-11 h-11 rounded-[12px] bg-gradient-to-br ${project.color} flex items-center justify-center shadow-md text-xl`}>
-          {project.icon}
-        </div>
+        {isAvatarUrl && !avatarError ? (
+          <img
+            src={project.icon}
+            alt={project.name}
+            className="w-11 h-11 rounded-[12px] border border-white/20 flex-shrink-0"
+            onError={() => setAvatarError(true)}
+          />
+        ) : (
+          <div className={`w-11 h-11 rounded-[12px] bg-gradient-to-br ${project.color} flex items-center justify-center shadow-md ${
+            isAvatarUrl ? '' : 'text-xl'
+          }`}>
+            {isAvatarUrl ? (
+              <Package className="w-6 h-6 text-white" />
+            ) : (
+              project.icon
+            )}
+          </div>
+        )}
       </div>
 
       <h4 className={`text-[16px] font-bold mb-2 transition-colors ${

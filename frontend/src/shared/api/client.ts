@@ -172,11 +172,13 @@ export const getPublicProjects = (params?: {
     projects: Array<{
       id: string;
       github_full_name: string;
-      language: string;
+      language: string | null;
       tags: string[];
-      category: string;
-      ecosystem_name: string;
-      ecosystem_slug: string;
+      category: string | null;
+      stars_count: number;
+      forks_count: number;
+      ecosystem_name: string | null;
+      ecosystem_slug: string | null;
       created_at: string;
       updated_at: string;
     }>;

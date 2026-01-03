@@ -45,3 +45,4 @@ docker exec patchwork-postgres psql -U grainlify -d grainlify -c "SELECT version
 
 **Note:** The setup commands above have been run automatically. You can now use the connection URL in your `.env` file.
 
+

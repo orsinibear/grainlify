@@ -1,12 +1,47 @@
-import { Star, GitFork, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dropdown } from '../../../shared/components/ui/Dropdown';
 import { ProjectCard, Project } from '../components/ProjectCard';
+import { ProjectCardSkeleton } from '../components/ProjectCardSkeleton';
+import { getPublicProjects } from '../../../shared/api/client';
 
 interface BrowsePageProps {
   onProjectClick?: (id: string) => void;
 }
+
+// Helper function to format numbers (e.g., 1234 -> "1.2K", 1234567 -> "1.2M")
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
+};
+
+// Helper function to get project icon/avatar
+const getProjectIcon = (githubFullName: string): string => {
+  const [owner] = githubFullName.split('/');
+  return `https://github.com/${owner}.png?size=40`;
+};
+
+// Helper function to get gradient color based on project name
+const getProjectColor = (name: string): string => {
+  const colors = [
+    'from-blue-500 to-cyan-500',
+    'from-purple-500 to-pink-500',
+    'from-green-500 to-emerald-500',
+    'from-red-500 to-pink-500',
+    'from-orange-500 to-red-500',
+    'from-gray-600 to-gray-800',
+    'from-green-600 to-green-800',
+    'from-cyan-500 to-blue-600',
+  ];
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+};
 
 export function BrowsePage({ onProjectClick }: BrowsePageProps) {
   const { theme } = useTheme();
@@ -23,6 +58,9 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     categories: [],
     tags: []
   });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Filter options data
   const filterOptions = {
@@ -81,112 +119,65 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
     );
   };
 
-  const allProjects: Project[] = [
-    {
-      id: 1,
-      name: 'React Ecosystem',
-      icon: '⚛️',
-      stars: '4.9M',
-      forks: '2.6M',
-      contributors: 45,
-      openIssues: 12,
-      prs: 0,
-      description: 'A modern React ecosystem for building user interfaces with enhanced UI/UX modules.',
-      tags: ['TypeScript', 'good first issue'],
-      color: 'from-blue-500 to-cyan-500',
-    },
-    {
-      id: 2,
-      name: 'Nextjs Framework',
-      icon: '▲',
-      stars: '120K',
-      forks: '24K',
-      contributors: 78,
-      openIssues: 20,
-      prs: 0,
-      description: 'The React framework for production with server-side rendering and static generation.',
-      tags: ['Frontend'],
-      color: 'from-purple-500 to-pink-500',
-    },
-    {
-      id: 3,
-      name: 'Vue.js',
-      icon: 'V',
-      stars: '214K',
-      forks: '36K',
-      contributors: 94,
-      openIssues: 8,
-      prs: 0,
-      description: 'Progressive JavaScript framework for building user interfaces and SPA.',
-      tags: ['Framework'],
-      color: 'from-green-500 to-emerald-500',
-    },
-    {
-      id: 4,
-      name: 'Angular',
-      icon: 'A',
-      stars: '93.5K',
-      forks: '24K',
-      contributors: 120,
-      openIssues: 35,
-      prs: 0,
-      description: 'A platform and framework for building single-page client applications.',
-      tags: ['Frontend', 'TypeScript'],
-      color: 'from-red-500 to-pink-500',
-    },
-    {
-      id: 5,
-      name: 'Svelte',
-      icon: 'S',
-      stars: '76K',
-      forks: '4K',
-      contributors: 298,
-      openIssues: 10,
-      prs: 0,
-      description: 'Cybernetically enhanced web apps with a radical new approach.',
-      tags: ['Framework'],
-      color: 'from-orange-500 to-red-500',
-    },
-    {
-      id: 6,
-      name: 'Express.js',
-      icon: 'E',
-      stars: '64K',
-      forks: '15K',
-      contributors: 152,
-      openIssues: 15,
-      prs: 0,
-      description: 'Fast, unopinionated, minimalist web framework for Node.js.',
-      tags: ['Backend', 'JavaScript'],
-      color: 'from-gray-600 to-gray-800',
-    },
-    {
-      id: 7,
-      name: 'Django',
-      icon: 'D',
-      stars: '76K',
-      forks: '31K',
-      contributors: 615,
-      openIssues: 26,
-      prs: 0,
-      description: 'High-level Python web framework that encourages rapid development.',
-      tags: ['Backend', 'Python'],
-      color: 'from-green-600 to-green-800',
-    },
-    {
-      id: 8,
-      name: 'Golang',
-      icon: 'G',
-      stars: '118K',
-      forks: '17K',
-      contributors: 96,
-      openIssues: 22,
-      prs: 0,
-      description: 'An open-source programming language for building simple, secure software.',
-      tags: ['Language'],
-      color: 'from-cyan-500 to-blue-600',
-    },
-  ];
+  // Fetch projects from API
+  useEffect(() => {
+    const loadProjects = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const params: {
+          language?: string;
+          ecosystem?: string;
+          category?: string;
+          tags?: string;
+        } = {};
+
+        // Apply filters
+        if (selectedFilters.languages.length > 0) {
+          params.language = selectedFilters.languages[0]; // API supports single language
+        }
+        if (selectedFilters.ecosystems.length > 0) {
+          params.ecosystem = selectedFilters.ecosystems[0]; // API supports single ecosystem
+        }
+        if (selectedFilters.categories.length > 0) {
+          params.category = selectedFilters.categories[0]; // API supports single category
+        }
+        if (selectedFilters.tags.length > 0) {
+          params.tags = selectedFilters.tags.join(','); // API supports comma-separated tags
+        }
+
+        const response = await getPublicProjects(params);
+        
+        // Map API response to Project interface
+        const mappedProjects: Project[] = response.projects.map((p) => {
+          const repoName = p.github_full_name.split('/')[1] || p.github_full_name;
+          return {
+            id: p.id,
+            name: repoName,
+            icon: getProjectIcon(p.github_full_name),
+            stars: formatNumber(p.stars_count),
+            forks: formatNumber(p.forks_count),
+            contributors: 0, // Not available in API yet
+            openIssues: 0, // Not available in API yet
+            prs: 0, // Not available in API yet
+            description: `${p.language || 'Project'} repository${p.category ? ` - ${p.category}` : ''}`,
+            tags: p.tags || [],
+            color: getProjectColor(repoName),
+          };
+        });
+
+        setProjects(mappedProjects);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load projects';
+        setError(errorMessage);
+        setProjects([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProjects();
+  }, [selectedFilters]);
 
   return (
     <div className="space-y-6">
@@ -234,16 +225,44 @@ export function BrowsePage({ onProjectClick }: BrowsePageProps) {
         ))}
       </div>
 
+      {/* Error State */}
+      {error && (
+        <div className={`p-4 rounded-[16px] border ${
+          theme === 'dark'
+            ? 'bg-red-500/10 border-red-500/30 text-red-400'
+            : 'bg-red-500/10 border-red-500/30 text-red-600'
+        }`}>
+          <p className="text-[14px] font-semibold">Error loading projects: {error}</p>
+        </div>
+      )}
+
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {allProjects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onClick={onProjectClick}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {[...Array(8)].map((_, idx) => (
+            <ProjectCardSkeleton key={idx} />
+          ))}
+        </div>
+      ) : projects.length === 0 ? (
+        <div className={`p-8 rounded-[16px] border text-center ${
+          theme === 'dark'
+            ? 'bg-white/[0.08] border-white/15 text-[#d4d4d4]'
+            : 'bg-white/[0.15] border-white/25 text-[#7a6b5a]'
+        }`}>
+          <p className="text-[16px] font-semibold">No projects found</p>
+          <p className="text-[14px] mt-2">Try adjusting your filters or check back later.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onClick={onProjectClick}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

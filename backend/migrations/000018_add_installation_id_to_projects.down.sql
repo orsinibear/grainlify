@@ -5,3 +5,4 @@ ALTER TABLE projects
 ALTER TABLE projects
   DROP COLUMN IF EXISTS deleted_at;
 
+

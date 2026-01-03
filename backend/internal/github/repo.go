@@ -15,8 +15,11 @@ type Repo struct {
 		ID    int64  `json:"id"`
 		Login string `json:"login"`
 	} `json:"owner"`
-	FullName    string `json:"full_name"`
-	Private     bool   `json:"private"`
+	FullName        string `json:"full_name"`
+	Private         bool   `json:"private"`
+	StargazersCount int    `json:"stargazers_count"`
+	ForksCount      int    `json:"forks_count"`
+	Description     string `json:"description"`
 	Permissions struct {
 		Admin bool `json:"admin"`
 		Push  bool `json:"push"`

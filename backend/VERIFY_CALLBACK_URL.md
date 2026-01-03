@@ -156,3 +156,4 @@ go run ./cmd/api
 
 **Most Common Issue:** Callback URL is not set in GitHub App settings. GitHub requires this to be explicitly configured - it won't use a URL from your code.
 
+

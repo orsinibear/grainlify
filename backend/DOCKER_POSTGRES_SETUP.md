@@ -201,3 +201,4 @@ DB_URL=postgresql://user:password@host:5432/database?sslmode=require
 
 **Note:** The `sslmode=disable` is fine for local development. For production, use `sslmode=require`.
 
+

@@ -5,3 +5,4 @@ ALTER TABLE oauth_states
 ALTER TABLE oauth_states
   ADD CONSTRAINT oauth_states_kind_check CHECK (kind IN ('github_link', 'github_login'));
 
+

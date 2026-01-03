@@ -106,6 +106,8 @@ SELECT
   p.language,
   p.tags,
   p.category,
+  p.stars_count,
+  p.forks_count,
   p.created_at,
   p.updated_at,
   e.name AS ecosystem_name,
@@ -130,10 +132,11 @@ LIMIT $%d OFFSET $%d
 			var fullName string
 			var language, category *string
 			var tagsJSON []byte
+			var starsCount, forksCount *int
 			var createdAt, updatedAt time.Time
 			var ecosystemName, ecosystemSlug *string
 
-			if err := rows.Scan(&id, &fullName, &language, &tagsJSON, &category, &createdAt, &updatedAt, &ecosystemName, &ecosystemSlug); err != nil {
+			if err := rows.Scan(&id, &fullName, &language, &tagsJSON, &category, &starsCount, &forksCount, &createdAt, &updatedAt, &ecosystemName, &ecosystemSlug); err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "projects_list_failed", "details": err.Error()})
 			}
 
@@ -143,12 +146,24 @@ LIMIT $%d OFFSET $%d
 				_ = json.Unmarshal(tagsJSON, &tags)
 			}
 
+			// Default to 0 if nil
+			stars := 0
+			if starsCount != nil {
+				stars = *starsCount
+			}
+			forks := 0
+			if forksCount != nil {
+				forks = *forksCount
+			}
+
 			out = append(out, fiber.Map{
 				"id":              id.String(),
 				"github_full_name": fullName,
 				"language":        language,
 				"tags":            tags,
 				"category":        category,
+				"stars_count":     stars,
+				"forks_count":     forks,
 				"ecosystem_name":  ecosystemName,
 				"ecosystem_slug":  ecosystemSlug,
 				"created_at":      createdAt,

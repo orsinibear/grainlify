@@ -48,3 +48,4 @@ After updating:
 
 **TL;DR:** Change "Where can this GitHub App be installed?" from "Only on this account" to "Any account" in your GitHub App settings.
 
+
