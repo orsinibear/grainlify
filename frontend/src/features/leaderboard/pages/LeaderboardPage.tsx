@@ -23,21 +23,25 @@ export function LeaderboardPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<LeaderData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Fetch leaderboard data
   useEffect(() => {
     const fetchLeaderboard = async () => {
       if (leaderboardType === 'contributors') {
         setIsLoading(true);
+        setOffset(0); // Reset offset when switching types
         try {
-          const data = await getLeaderboard(10);
+          const data = await getLeaderboard(10, 0);
           // Transform API data to match LeaderData type
           const transformedData: LeaderData[] = data.map((item) => ({
             rank: item.rank,
             rank_tier: item.rank_tier,
             rank_tier_name: item.rank_tier_name,
             username: item.username,
-            avatar: item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.username)}&background=c9983a&color=fff&size=128`,
+            avatar: item.avatar || `https://github.com/${item.username}.png?size=200`,
             user_id: item.user_id || '',
             score: item.score,
             trend: item.trend,
@@ -46,6 +50,7 @@ export function LeaderboardPage() {
             ecosystems: item.ecosystems || [],
           }));
           setLeaderboardData(transformedData);
+          setHasMore(data.length === 10); // If we got 10 items, there might be more
           setIsLoading(false);
         } catch (err) {
           console.error('Failed to fetch leaderboard:', err);
@@ -62,6 +67,47 @@ export function LeaderboardPage() {
 
     fetchLeaderboard();
   }, [leaderboardType]);
+
+  // Load more leaderboard data
+  const loadMore = async () => {
+    if (isLoadingMore || !hasMore) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const nextOffset = offset + 10;
+      const data = await getLeaderboard(10, nextOffset);
+      
+      if (data.length === 0) {
+        setHasMore(false);
+        setIsLoadingMore(false);
+        return;
+      }
+
+      // Transform and append new data
+      const transformedData: LeaderData[] = data.map((item) => ({
+        rank: item.rank,
+        rank_tier: item.rank_tier,
+        rank_tier_name: item.rank_tier_name,
+        username: item.username,
+        avatar: item.avatar || `https://github.com/${item.username}.png?size=200`,
+        user_id: item.user_id || '',
+        score: item.score,
+        trend: item.trend,
+        trendValue: item.trendValue,
+        contributions: item.contributions,
+        ecosystems: item.ecosystems || [],
+      }));
+      
+      setLeaderboardData((prev) => [...prev, ...transformedData]);
+      setOffset(nextOffset);
+      setHasMore(data.length === 10); // If we got less than 10, no more data
+    } catch (err) {
+      console.error('Failed to load more leaderboard:', err);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Generate falling petals on mount
   useEffect(() => {
@@ -155,16 +201,36 @@ export function LeaderboardPage() {
           {isLoading ? (
             <ContributorsTableSkeleton />
           ) : (
-            <ContributorsTable
-              data={leaderboardData}
-              activeFilter={activeFilter}
-              isLoaded={isLoaded}
-              onUserClick={(username, userId) => {
-                // Navigate to profile page with user identifier
-                const identifier = userId || username;
-                window.location.href = `/dashboard?page=profile&user=${identifier}`;
-              }}
-            />
+            <>
+              <ContributorsTable
+                data={leaderboardData}
+                activeFilter={activeFilter}
+                isLoaded={isLoaded}
+                onUserClick={(username, userId) => {
+                  // Navigate to profile page with user identifier
+                  const identifier = userId || username;
+                  window.location.href = `/dashboard?page=profile&user=${identifier}`;
+                }}
+              />
+              {hasMore && (
+                <div className="flex justify-center mt-6">
+                  <button
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
+                    className={`px-6 py-3 rounded-[14px] bg-gradient-to-br from-[#c9983a] to-[#a67c2e] text-white font-semibold text-[14px] shadow-[0_6px_24px_rgba(162,121,44,0.4)] hover:shadow-[0_8px_28px_rgba(162,121,44,0.5)] transition-all border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'View All'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
