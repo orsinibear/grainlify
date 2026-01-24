@@ -549,19 +549,25 @@ func encodeStateWithRedirect(csrfToken, redirectURI string) string {
 
 // decodeStateWithRedirect decodes the state parameter to extract CSRF token and redirect_uri.
 // Returns: (csrfToken, redirectURI, error)
+// Handles backward compatibility: if state is not encoded, treats it as plain CSRF token
 func decodeStateWithRedirect(encodedState string) (string, string, error) {
+	// Try to decode as base64
 	decoded, err := base64.RawURLEncoding.DecodeString(encodedState)
 	if err != nil {
 		// If decoding fails, treat entire state as CSRF token (backward compatible)
+		// This handles states created before the encoding change
 		return encodedState, "", nil
 	}
 
-	parts := strings.SplitN(string(decoded), "|", 2)
+	decodedStr := string(decoded)
+	parts := strings.SplitN(decodedStr, "|", 2)
 	if len(parts) == 2 {
+		// New format: csrf_token|redirect_uri
 		return parts[0], parts[1], nil
 	}
-	// If no separator, entire decoded value is the CSRF token
-	return string(decoded), "", nil
+	// If no separator, entire decoded value is the CSRF token (backward compatible)
+	// This handles states that were base64 encoded but without redirect_uri
+	return decodedStr, "", nil
 }
 
 
