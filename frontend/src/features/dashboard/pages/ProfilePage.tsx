@@ -624,6 +624,18 @@ export function ProfilePage({
                 {/* Social Media Links - Show all icons, dimmed if no link */}
                 {!isLoadingProfile && (
                   <div className="flex items-center gap-3 flex-wrap mb-4">
+                    {/* GitHub */}
+                    <a
+                      href={`https://github.com/${
+                        viewingUser?.login || user?.github?.login
+                      }`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-[#c9983a]/30 to-[#d4af37]/20 border-2 border-[#c9983a]/50 flex items-center justify-center hover:scale-110 hover:shadow-[0_4px_12px_rgba(201,152,58,0.4)] transition-all duration-300"
+                      title="GitHub"
+                    >
+                      <Github className="w-4 h-4 text-[#c9983a]" />
+                    </a>
                     {/* Telegram */}
                     {profileData?.telegram ? (
                       <a
