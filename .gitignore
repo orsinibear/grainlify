@@ -4,3 +4,7 @@
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 wasm_hash.txt
+
+# Test Artifacts
+**/test_snapshots/test_bounty_escrow/
+**/test_snapshots/tests_external/
