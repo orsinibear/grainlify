@@ -1,4 +1,3 @@
-
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
@@ -8,6 +7,9 @@ wasm_hash.txt
 # Test Artifacts
 **/test_snapshots/test_bounty_escrow/
 **/test_snapshots/tests_external/
+# Node modules
+node_modules/
+
 # Deployment Scripts - Sensitive Files
 # Keep templates, ignore local overrides
 contracts/scripts/config/*.env.local
