@@ -8,3 +8,17 @@ wasm_hash.txt
 # Test Artifacts
 **/test_snapshots/test_bounty_escrow/
 **/test_snapshots/tests_external/
+# Deployment Scripts - Sensitive Files
+# Keep templates, ignore local overrides
+contracts/scripts/config/*.env.local
+contracts/scripts/config/.env
+
+# Deployment Records (may contain contract addresses)
+# Review before committing to public repos
+contracts/deployments/*.json
+!contracts/deployments/.gitkeep
+
+# Soroban Local Data
+.soroban/
+soroban/.soroban/identity/
+soroban/.soroban/network/
