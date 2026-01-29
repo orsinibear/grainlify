@@ -89,7 +89,7 @@
 #![no_std]
 mod events;
 mod test_bounty_escrow;
-#[cfg(test)]
+//#[cfg(test)]
 //mod test_query;
 
 use events::{
