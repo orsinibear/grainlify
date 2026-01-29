@@ -1,8 +1,92 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, Info, Sun, Moon } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line as RechartsLine, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup, Line as MapLine } from "react-simple-maps";
 import { useTheme } from '../../../shared/contexts/ThemeContext';
+
+type ActivityPoint = {
+  label: string;
+  value: number;
+  trend: number;
+  new: number;
+  reactivated: number;
+  active: number;
+  churned: number;
+  rewarded: number;
+};
+
+const buildRatios = (base: any) => ({
+  trend: base.trend ? base.trend / base.value : 0,
+  new: base.new ? base.new / base.value : 0,
+  reactivated: base.reactivated ? base.reactivated / base.value : 0,
+  active: base.active ? base.active / base.value : 0,
+  churned: base.churned ? base.churned / base.value : 0,
+  rewarded: base.rewarded ? base.rewarded / base.value : 0,
+});
+
+const scalePoint = (label: string, value: number, ratios: ReturnType<typeof buildRatios>): ActivityPoint => ({
+  label,
+  value,
+  trend: Math.round(value * ratios.trend),
+  new: Math.round(value * ratios.new),
+  reactivated: Math.round(value * ratios.reactivated),
+  active: Math.round(value * ratios.active),
+  churned: Math.round(value * ratios.churned),
+  rewarded: Math.round(value * ratios.rewarded),
+});
+
+const aggregateRange = (label: string, slice: any[]): ActivityPoint => {
+  const totals = slice.reduce(
+    (acc, item) => ({
+      value: acc.value + item.value,
+      trend: acc.trend + item.trend,
+      new: acc.new + item.new,
+      reactivated: acc.reactivated + item.reactivated,
+      active: acc.active + item.active,
+      churned: acc.churned + item.churned,
+      rewarded: acc.rewarded + item.rewarded,
+    }),
+    { value: 0, trend: 0, new: 0, reactivated: 0, active: 0, churned: 0, rewarded: 0 },
+  );
+  return { label, ...totals };
+};
+
+const buildDailyData = (monthly: any[]): ActivityPoint[] => {
+  const base = monthly[monthly.length - 1];
+  const ratios = buildRatios(base);
+  const days = 28;
+  const baseValue = Math.max(1, Math.round(base.value / days));
+  return Array.from({ length: days }).map((_, idx) => {
+    const bump = 0.85 + (idx % 7) * 0.03;
+    const value = Math.max(1, Math.round(baseValue * bump));
+    return scalePoint(`D${idx + 1}`, value, ratios);
+  });
+};
+
+const buildWeeklyData = (monthly: any[]): ActivityPoint[] => {
+  const recent = monthly.slice(-3);
+  const avg = Math.round(recent.reduce((sum, item) => sum + item.value, 0) / recent.length);
+  const ratios = buildRatios(recent[recent.length - 1]);
+  const weeks = 12;
+  const baseValue = Math.max(1, Math.round(avg / 4));
+  return Array.from({ length: weeks }).map((_, idx) => {
+    const bump = 0.9 + (idx % 4) * 0.05;
+    const value = Math.max(1, Math.round(baseValue * bump));
+    return scalePoint(`W${idx + 1}`, value, ratios);
+  });
+};
+
+const buildQuarterlyData = (monthly: any[]): ActivityPoint[] => ([
+  aggregateRange('Q1', monthly.slice(0, 3)),
+  aggregateRange('Q2', monthly.slice(3, 6)),
+  aggregateRange('Q3', monthly.slice(6, 9)),
+  aggregateRange('Q4', monthly.slice(9, 12)),
+]);
+
+const buildYearlyData = (monthly: any[]): ActivityPoint[] => ([
+  aggregateRange('2024', monthly.slice(0, 6)),
+  aggregateRange('2025', monthly.slice(6, 12)),
+]);
 
 export function DataPage() {
   const { theme, toggleTheme } = useTheme();
@@ -108,7 +192,7 @@ export function DataPage() {
       const data = payload[0].payload;
       return (
         <div className="backdrop-blur-[30px] bg-[#1a1410]/95 border-2 border-white/20 rounded-[12px] px-5 py-4 min-w-[200px]">
-          <p className="text-[13px] font-bold text-white mb-3">{data.month} 2025</p>
+          <p className="text-[13px] font-bold text-white mb-3">{data.label || data.month} 2025</p>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -152,6 +236,31 @@ export function DataPage() {
     }
     return null;
   };
+
+  const contributorChartData = useMemo<ActivityPoint[]>(() => {
+    if (contributorInterval === 'Daily interval') {
+      return buildDailyData(contributorActivityData);
+    }
+    if (contributorInterval === 'Weekly interval') {
+      return buildWeeklyData(contributorActivityData);
+    }
+    if (contributorInterval === 'Quarterly interval') {
+      return buildQuarterlyData(contributorActivityData);
+    }
+    if (contributorInterval === 'Yearly interval') {
+      return buildYearlyData(contributorActivityData);
+    }
+    return contributorActivityData.map((item) => ({
+      label: item.month,
+      value: item.value,
+      trend: item.trend,
+      new: item.new,
+      reactivated: item.reactivated,
+      active: item.active,
+      churned: item.churned,
+      rewarded: item.rewarded,
+    }));
+  }, [contributorInterval]);
 
   return (
     <div className={`min-h-screen space-y-6 ${theme === 'dark' ? 'bg-[#1a1612]' : 'bg-gray-50'}`}>
@@ -689,7 +798,7 @@ export function DataPage() {
           {/* Chart */}
           <div className="h-[280px] mb-6">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={contributorActivityData}>
+              <ComposedChart data={contributorChartData}>
                 <defs>
                   <linearGradient id="contributorBarGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#c9983a" stopOpacity={0.8} />
@@ -698,7 +807,7 @@ export function DataPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(122, 107, 90, 0.1)" />
                 <XAxis
-                  dataKey="month"
+                  dataKey="label"
                   stroke="#7a6b5a"
                   tick={{ fill: '#7a6b5a', fontSize: 11, fontWeight: 600 }}
                   angle={-45}
